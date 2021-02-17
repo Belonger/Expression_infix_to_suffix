@@ -1,0 +1,163 @@
+#include <iostream>
+#include <algorithm>
+#include <string>
+#include <cstring>
+#include <stack>
+#include <queue>
+using namespace std;
+
+struct TreeNode {
+	string data;
+	TreeNode* leftChild;
+	TreeNode* rightChild;
+};
+
+//运算符的优先级
+int Level(char s) {
+	int level = 0;
+	switch (s) {
+	case '+':
+	case '-':
+		level = 1;
+		break;
+	case '*':
+	case '/':
+		level = 2;
+		break;
+	//先考虑加减乘除及带括号，在考虑指数，幂运算等等
+	default:
+		break;
+	}
+	return level;
+}
+
+//中缀转后缀的实现
+void InToPos(string s, queue<char>& q) {//队列中存入子符串数字和运算符
+	int size = s.length();//这个length()函数的内部机制是怎么实现的，原理是什么？
+	stack<char> oper;//栈中是压入运算符和左括号的
+	for (int i = 0; i < size; i++) {
+		if (s[i] >= '0' && s[i] <= '9') { 
+			q.push(s[i]); 
+			while (s[i + 1] >= '0' && s[i + 1] <= '9') {
+				q.push(s[++i]);
+			}
+			q.push(' ');
+		}
+		//在这里需要做出改变
+		//问题在于输出的时候和后续需要进行后缀表达式计算的时，要用整型，而不是string。so transform(string->整型) 
+		//还是在于怎么把比如一个子符串34转换为整型数34
+		else {
+			int level = Level(s[i]);
+			if (oper.empty()) oper.push(s[i]);	
+			else {
+				if (s[i] == '(') oper.push(s[i]);
+				else if (s[i] == ')') {
+					while (oper.top() != '(') {
+						q.push(oper.top());
+						q.push(' ');
+						oper.pop();
+					}
+					oper.pop();
+				}
+				else {
+					while (!oper.empty()) {
+						if (oper.top() == '(') break;
+						else {
+							int level1 = Level(oper.top());//栈顶的
+							if (level > level1) break;//level 是当前的 level1是栈顶的，前一个的
+							else {
+								q.push(oper.top());
+								q.push(' ');
+								oper.pop();
+							}
+						}
+					}
+					oper.push(s[i]);
+				}
+			}
+		}
+	}
+	while (!oper.empty()) {
+		q.push(oper.top());
+		q.push(' ');
+		oper.pop();
+	}
+}
+
+//后缀表达式的计算
+int Calculate(queue<char> q) {
+	stack<int> num;
+	while (!q.empty()) {
+		if (q.front() == ' ') { 
+			q.pop();
+			continue; 
+		}
+		if (q.front() >= '0' && q.front() <= '9') {
+			int temp = 0;
+			temp = q.front() - '0';
+			q.pop();
+			while (q.front() >= '0' && q.front() <= '9') {
+				temp = temp * 10 + q.front() - '0';
+				q.pop();
+			}
+			num.push(temp);
+		}
+		else {//加减乘除运算
+			int num1 = num.top();
+			num.pop();
+			int num2 = num.top();
+			num.pop();
+			int num3 = 0;//在这里要保存到小数点后四位，需更改
+			switch (q.front()) {
+			case '+':
+				num3 = num2 + num1;
+				break;
+			case '-':
+				num3 = num2 - num1;
+				break;
+			case '*':
+				num3 = num2 * num1;
+				break;
+			case '/':
+				num3 = num2 / num1;
+				break;
+			}
+			num.push(num3);
+			q.pop();
+		}
+	}
+	return num.top();
+}
+
+//后缀转树的实现，只进行转换的实现
+TreeNode* PosToTree(queue<char> q) {
+	stack<TreeNode*> node;
+	while (!q.empty()) {
+		if (q.front() == ' ') continue;
+		if (q.front() >= '0' && q.front() <= '9') {
+			char temp = q.front();
+			q.pop();
+			while (q.front() >= '0' && q.front() <= '9') {
+				
+				q.pop();
+			}
+		}
+	}
+}
+
+int main() {
+	string s;
+	cin >> s;
+	queue<char> posOrder;
+	InToPos(s, posOrder);
+
+	int answer = Calculate(posOrder);
+	cout << s <<" = " <<answer << endl;
+
+	while (!posOrder.empty()) {
+		cout << posOrder.front();
+		posOrder.pop();
+	}
+
+	return 0;
+}
